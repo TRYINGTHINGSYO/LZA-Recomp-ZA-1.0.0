@@ -4,6 +4,47 @@ This branch is development groundwork, **not a working 1.0.0 release**. The
 upstream runtime's supported Z-A version remains 2.0.2. Do not remove its version
 checks or run its 2.0.2 hooks against 1.0.0.
 
+## Current development milestone
+
+The preflight now validates the unique five-entry frame-time table at
+`main+0x31e6a70`, its six decoded ADRP/ADD references, and the three timing
+instructions. All checks passed on the locally available 1.0.0 main. Thirteen
+synthetic tests exercise mismatched builds, modified instructions, duplicate
+tables, segment boundaries, wrong targets/registers and explicit opt-in.
+
+An opt-in generic-runtime bootstrap recognizes 1.0.0 as a distinct build,
+requires `LZA_EXPERIMENTAL_ZA100_BOOTSTRAP=1` and validates the image before
+generation. It starts at 30 FPS and does not select the 2.0.2 hook profile. This
+is a developer test path, not high-FPS support. Runtime compilation has succeeded
+on Windows using the full Zig 0.17.0 package. Game-code generation and runtime
+boot results must be recorded separately; successful checks do not imply either.
+
+### Local boot test results (2026-11-21)
+
+- Windows runtime compiled and linked, then the local 1.0.0 game-code build
+  completed in 542 seconds. Generated code and binaries stay local.
+- The title screen rendered at 30 FPS on a Ryzen 7 7800X3D / RTX 5070 Ti.
+- Short injected keyboard presses did not advance the title. A second run used
+  the runtime's existing scripted controller input to make repeatable presses.
+- After leaving the title screen, Vulkan returned `VK_ERROR_DEVICE_LOST`.
+  A separate diagnostic run using copied vertices, per-pass barriers, synchronous
+  submissions/shader builds and disabled graphics pipeline libraries also failed.
+- The conservative trace ended on submission 25438, with a draw of 4626 elements,
+  one instance and fragment program key `06132e4d0e92940b`. This identifies a
+  reproducible investigation point, **not proof that this shader caused it**.
+- No successful gameplay, imported-save compatibility or high-FPS result is
+  claimed. The original working port and original save are retained. No game
+  binaries, shaders, saves or raw machine logs are uploaded.
+
+The next blocker is renderer compatibility during the loading transition. Isolate
+the failing submission and compare the relevant translation/bindings with the
+working 1.0.0 port before enabling any high-FPS hooks. Do not repeatedly trigger
+device loss as a performance benchmark.
+
+Windows packaging includes the preflight module. The native build script now
+prefers explicit DLL import archives when MSYS2 also supplies static FFmpeg
+archives, avoiding accidental linkage to optional static codec dependencies.
+
 The available 1.0.0 main has build prefix `7222e13ecf6adb32`. The read-only
 `tools/za100_preflight.py` validates three timing instructions documented by
 [ZA Recomp](https://github.com/Hexveil404/PokeZ-ARecomp/blob/pokemon-za/tools/za_patches.py)

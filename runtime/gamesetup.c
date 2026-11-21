@@ -22,6 +22,7 @@
 #include "nxpkg.h"
 #include "paths.h"
 #include "platform.h"
+#include "za100_bootstrap.h"
 #include "romfs_build.h"
 
 #define ROOT "extracted"  // (in the data root, the working directory)
@@ -89,11 +90,14 @@ int game_build(const char *exefs) {
     if (n == 8 && !memcmp(id, EEVEE_100, 8) && pid == TITLE_EEVEE) return GAME_BUILD_EEVEE_100;
     if (n == 8 && !memcmp(id, PIKACHU_100, 8) && pid == TITLE_PIKACHU) return GAME_BUILD_PIKACHU_100;
     if (n == 8 && !memcmp(id, ZA_202, 8) && pid == TITLE_ZA) return GAME_BUILD_ZA_202;
+    if (n == 8 && za100_build(id) && pid == TITLE_ZA) return GAME_BUILD_ZA_100_EXPERIMENTAL;
     return GAME_BUILD_OTHER;
 }
 
 bool game_za_unsupported(const char *exefs) {
-    return program_id(exefs) == TITLE_ZA && game_build(exefs) != GAME_BUILD_ZA_202;
+    int build = game_build(exefs);
+    return program_id(exefs) == TITLE_ZA && build != GAME_BUILD_ZA_202 &&
+           !(build == GAME_BUILD_ZA_100_EXPERIMENTAL && za100_bootstrap_enabled());
 }
 
 const char *game_version(const char *exefs) {

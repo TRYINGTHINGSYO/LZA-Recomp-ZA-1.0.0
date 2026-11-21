@@ -825,7 +825,7 @@ from patches import BUILD_ADDRS, EEVEE_100_BUILD, PATCHES
 # Legends Z-A: the runtime's addresses are 2.0.2's (main build b1f12fd919eae86a). Another known main would build, then
 # run with every Z-A fix and option at the wrong place: stopped here instead (the start screen says the same:
 # runtime/gamesetup.c game_za_unsupported).
-ZA_OTHER_BUILDS = {'8a1c86c437394b69': '2.0.0'}
+ZA_OTHER_BUILDS = {'8a1c86c437394b69': '2.0.0', '7222e13ecf6adb32': '1.0.0'}
 
 import json as _json
 import os as _os
@@ -868,8 +868,15 @@ def main():
     t0 = time.time()
     m = Module(args.name, args.nso, args.base, args.simd, args.trace_stores)
     bid = m.nso.build_id[:16]
+    if args.name == 'main' and bid == '7222e13ecf6adb32':
+        from za100_preflight import bootstrap_allowed, check_image
+        if not bootstrap_allowed(bid, os.environ, m.nso.image, m.nso.text, m.nso.rodata):
+            sys.exit('Z-A 1.0.0 is not supported for normal play. The experimental bootstrap '
+                     'requires explicit opt-in and all local timing checks to pass.')
+        print('EXPERIMENTAL Z-A 1.0.0: generic runtime bootstrap only; no 2.0.2 patches.')
     if args.name == 'main' and bid in ZA_OTHER_BUILDS:
-        sys.exit(f'main: Pokemon Legends: Z-A {ZA_OTHER_BUILDS[bid]} (build {bid}). This recomp needs Z-A 2.0.2 (main build '
+        if bid != '7222e13ecf6adb32':
+            sys.exit(f'main: Pokemon Legends: Z-A {ZA_OTHER_BUILDS[bid]} (build {bid}). This recomp needs Z-A 2.0.2 (main build '
                  'b1f12fd919eae86a): dump the base game and the 2.0.2 update and extract them together (README.md).')
     if args.name == 'main' and bid != EEVEE_100_BUILD:
         # The instruction patches are written for Let's Go Eevee 1.0.0's main: moved to the same instructions of a

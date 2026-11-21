@@ -111,7 +111,7 @@ def main():
         die('python-embed.zip has no python3*._pth')
     zipname = os.path.basename(pth[0])[:-5] + '.zip'
     open(pth[0], 'w', newline='').write('%s\n.\nLib\\site-packages\n..\\gen\n' % zipname)
-    for m in ('gen', 'lifter', 'analyze', 'nso', 'passes', 'patches', 'simd_c'):
+    for m in ('gen', 'lifter', 'analyze', 'nso', 'passes', 'patches', 'simd_c', 'za100_preflight'):
         shutil.copy('tools/%s.py' % m, os.path.join(D, 'gen'))
     # the compiler: zig for Windows, only what compiling C for x86-64 Windows needs
     zipfile.ZipFile(os.path.join(W, 'zig-windows.zip')).extractall(D)

@@ -44,7 +44,8 @@ const char *game_name(const char *exefs);
 // The build of that exefs/main: one with address tables (runtime/fnhook.c, tools/patches.py) - the 60 fps and wild
 // battles options and the generator's patches - or GAME_BUILD_OTHER (an update, say: those stay off). Legends Z-A:
 // 2.0.2 (main B1F12FD919EAE86A), the build the runtime's Z-A addresses are written for.
-enum { GAME_BUILD_OTHER, GAME_BUILD_EEVEE_100, GAME_BUILD_PIKACHU_100, GAME_BUILD_ZA_202 };
+enum { GAME_BUILD_OTHER, GAME_BUILD_EEVEE_100, GAME_BUILD_PIKACHU_100, GAME_BUILD_ZA_202,
+       GAME_BUILD_ZA_100_EXPERIMENTAL };
 int game_build(const char *exefs);
 // Legends Z-A, but not 2.0.2 (2.0.0, say): not played - its addresses are all elsewhere (SETUP_FAIL_ZA_VERSION).
 bool game_za_unsupported(const char *exefs);

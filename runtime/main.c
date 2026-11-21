@@ -338,6 +338,16 @@ int main(int argc, char **argv) {
             char exefs[1100];
             snprintf(exefs, sizeof exefs, "%s/exefs", root);
             int build = game_build(exefs);
+            if (build == GAME_BUILD_ZA_100_EXPERIMENTAL) {
+                if (game_za_unsupported(exefs)) {
+                    LOG("[boot] Z-A 1.0.0 is experimental and disabled; refusing to load it\n");
+                    return 1;
+                }
+                // This milestone tests generic runtime boot only. 1.0.0 has no
+                // verified high-FPS compensation or game-specific hook profile.
+                g_settings.fps = 30;
+                LOG("[boot] EXPERIMENTAL Z-A 1.0.0 bootstrap: 30 FPS, no 2.0.2 game hooks; use a disposable save copy\n");
+            }
             rt_fnhook_set_build(build);
             extern const char *g_game_version;  // (runtime/services/am.c)
             g_game_version = game_version(exefs);

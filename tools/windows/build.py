@@ -22,6 +22,17 @@ LIBS = ['-lSDL3', '-lavformat', '-lavcodec', '-lavutil', '-lswscale', '-lvulkan-
         '-lcomdlg32', '-luuid', '-lws2_32', '-lwinhttp', '-lshaderc_shared']
 
 
+def import_libraries(deps):
+    # MSYS2 supplies both static FFmpeg archives and DLL import archives. Zig's
+    # Windows lookup may pick libavformat.a for -lavformat, pulling in every
+    # optional codec dependency. The runtime ships DLLs: prefer their imports.
+    result = []
+    for flag in LIBS:
+        archive = os.path.join(deps, 'lib', 'lib' + flag[2:] + '.dll.a')
+        result.append(archive if os.path.isfile(archive) else flag)
+    return result
+
+
 def die(msg):
     print('build.py: ' + msg, file=sys.stderr)
     sys.exit(1)
@@ -187,7 +198,7 @@ def main():
     objs = [j[1] for j in jobs]
     os.makedirs(B + '/link', exist_ok=True)
     tmp = B + '/link/%s.exe' % exe_name
-    ok, log = run(cxx + ['-o', tmp] + objs + ['-fuse-ld=lld', '-Wl,--stack,16777216', '-L' + deps + '/lib'] + LIBS + ['-v'])
+    ok, log = run(cxx + ['-o', tmp] + objs + ['-fuse-ld=lld', '-Wl,--stack,16777216', '-L' + deps + '/lib'] + import_libraries(deps) + ['-v'])
     line = next((l for l in log.splitlines() if 'lld-link' in l and '-OUT:' in l), None)
     if not ok or not line:  # (zig builds its C runtime here the first time: a drive that drops files under load fails it)
         die('link failed:\n' + log[-3000:])

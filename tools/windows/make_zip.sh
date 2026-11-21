@@ -33,7 +33,7 @@ for w in "$W"/wheels/*.whl; do unzip -q -o "$w" -d "$D/python/Lib/site-packages"
 rm -f "$D/python/Lib/site-packages/unicorn/lib/unicorn.lib"
 rm -rf "$D/python/Lib/site-packages/unicorn/include" "$D/python/Lib/site-packages/capstone/include"
 printf 'python312.zip\n.\nLib\\site-packages\n..\\gen\n' > "$D/python/python312._pth"
-cp tools/{gen,lifter,analyze,nso,passes,patches,simd_c}.py "$D/gen/"
+cp tools/{gen,lifter,analyze,nso,passes,patches,simd_c,za100_preflight}.py "$D/gen/"
 # the compiler: zig for Windows, only what compiling C for x86-64 Windows needs
 unzip -q "$W/zig-windows.zip" -d "$D" && mv "$D"/zig-x86_64-windows-* "$D/zig"
 L=$D/zig/lib
