@@ -1,3 +1,13 @@
+# Experimental Z-A 1.0.0 development fork
+
+**Not a playable 1.0.0 release.** This fork contains read-only validation tools
+and initial porting research. The runtime still supports upstream's 2.0.2 build
+only. See [1.0.0 development status](docs/ZA-1.0.0-STATUS.md). There is no verified
+120/144 FPS result for 1.0.0 from this fork. Do not replace a working installation.
+
+The original upstream README follows; its gameplay and performance claims refer
+to the upstream 2.0.2 port, not this experimental 1.0.0 effort.
+
 # PL:Z-A Recomp (LZ&A Recomp, branch `LegendsZA`)
 
 <p align="center">
