@@ -41,6 +41,27 @@ the failing submission and compare the relevant translation/bindings with the
 working 1.0.0 port before enabling any high-FPS hooks. Do not repeatedly trigger
 device loss as a performance benchmark.
 
+### Robustness2 comparison: did not fix device loss
+
+The working Hexveil404/PokeZ-ARecomp installation logs Robustness2 buffer/image
+access enabled on this NVIDIA GPU. This fork lacked that feature path, so an
+opt-in implementation was adapted from its MIT-licensed `device.c`:
+`LZA_ZA100_ROBUST2=1`. It queries both Robustness2 features and core robust buffer
+support, enables the extension only when available, and respects the existing
+`LARECOMP_NO_ROBUST` override. Without explicit opt-in, behavior is unchanged.
+
+The changed runtime compiled and linked. Both scripted loading and a subsequent
+manual test still failed with `vkWaitSemaphores: -4 (device lost)`. The manual log
+confirmed `experimental Robustness2 buffer/image access: yes`, reached frame 1009
+at about 36.6 seconds with a 30 FPS cap, then reported a device fault. The user
+reported the graphics-driver crash when moving in-game. This distinguishes the
+user's observation from what the log alone proves.
+
+**Outcome: failed compatibility experiment, not a crash fix.** Do not recommend
+this option as making 1.0.0 playable. Do not raise the cap to 120 FPS to address
+this fault, and do not infer a broken driver installation or hardware defect from
+this runtime-specific failure. No further automatic crash loop is run.
+
 Windows packaging includes the preflight module. The native build script now
 prefers explicit DLL import archives when MSYS2 also supplies static FFmpeg
 archives, avoiding accidental linkage to optional static codec dependencies.

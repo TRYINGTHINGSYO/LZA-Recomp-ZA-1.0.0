@@ -244,12 +244,23 @@ static void create_device(void) {
             else if (!dup) LOG("[plugin] device extension %s: not available\n", pe[i]);
         }
     }
+    // Experimental compatibility path adapted from Hexveil404/PokeZ-ARecomp's
+    // device.c (MIT; see LICENSE). The working 1.0.0 port enables Robustness2
+    // on NVIDIA; base robustBufferAccess alone does not cover image accesses.
+    const char *rb2_option = ENV("LZA_ZA100_ROBUST2");
+    bool robust2 = rb2_option && !strcmp(rb2_option, "1") && !ENV("LARECOMP_NO_ROBUST") &&
+                   has_ext(ep, ne, VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
     free(ep);
 
     // features the backend relies on (all present on current desktop drivers)
-    VkPhysicalDeviceVulkan12Features have12 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+    VkPhysicalDeviceRobustness2FeaturesEXT have_rb2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT};
+    VkPhysicalDeviceVulkan12Features have12 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+                                              .pNext = robust2 ? &have_rb2 : NULL};
     VkPhysicalDeviceFeatures2 have = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &have12};
     vkGetPhysicalDeviceFeatures2(g_vk.phys, &have);
+    robust2 = robust2 && have.features.robustBufferAccess && have_rb2.robustBufferAccess2 && have_rb2.robustImageAccess2;
+    if (robust2) ext[n_ext++] = VK_EXT_ROBUSTNESS_2_EXTENSION_NAME;
+    LOG("[vk] experimental Robustness2 buffer/image access: %s\n", robust2 ? "yes" : "no");
     g_vk.oq_host_reset = have12.hostQueryReset;  // (occlusion queries, exec.c: slots reset from the CPU)
     g_vk.minmax = have12.samplerFilterMinmax;    // (samplers with a min / max reduction: textures.c sampler_create)
     VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT div = {
@@ -271,6 +282,10 @@ static void create_device(void) {
                                             .hostQueryReset = have12.hostQueryReset, .samplerFilterMinmax = have12.samplerFilterMinmax,
                                             .bufferDeviceAddress = VK_TRUE,  // (Vulkan 1.3 requires it: the guest heap's address, exec.c gmem_ref_info)
                                             .pNext = &f13};
+    VkPhysicalDeviceRobustness2FeaturesEXT rb2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+        .robustBufferAccess2 = VK_TRUE, .robustImageAccess2 = VK_TRUE, .pNext = f13.pNext};
+    if (robust2) f13.pNext = &rb2;
     VkPhysicalDeviceVulkan11Features f11 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
                                             .storageBuffer16BitAccess = VK_TRUE, .shaderDrawParameters = VK_TRUE, .pNext = &f12};
     VkPhysicalDeviceFaultFeaturesEXT ff = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT, .deviceFault = VK_TRUE,
