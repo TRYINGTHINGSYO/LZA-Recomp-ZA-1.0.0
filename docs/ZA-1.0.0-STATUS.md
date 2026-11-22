@@ -1,5 +1,9 @@
 # Experimental Z-A 1.0.0 port
 
+See the [renderer investigation](ZA-1.0.0-RENDERER-FINDINGS.md) for two confirmed
+Vulkan API corrections and the remaining device-loss failure. Gameplay is still
+not verified; GPU tests are stopped at the user's request.
+
 This branch is development groundwork, **not a working 1.0.0 release**. The
 upstream runtime's supported Z-A version remains 2.0.2. Do not remove its version
 checks or run its 2.0.2 hooks against 1.0.0.

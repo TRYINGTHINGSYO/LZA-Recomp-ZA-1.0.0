@@ -4152,7 +4152,15 @@ static void texture_info(int stage, ShaderInfo *si, int i, VkDescriptorImageInfo
                 }
         }
     }
-    if (h && st.spool && tsc < (uint32_t)st.spool->count) smp = vk_sampler_for(&((NvnSamplerDesc *)st.spool->entries)[tsc], st_->shadow);
+    bool integer_view = false;
+    if (h && st.tpool && tic < (uint32_t)st.tpool->count) {
+        NvnTexEntry *entry = &((NvnTexEntry *)st.tpool->entries)[tic];
+        if (entry->tex) integer_view = vk_view_is_integer(entry->tex, &entry->view, entry->has_view);
+    }
+    if (h && st.spool && tsc < (uint32_t)st.spool->count) {
+        NvnSamplerDesc *desc = &((NvnSamplerDesc *)st.spool->entries)[tsc];
+        smp = integer_view ? vk_sampler_nearest(desc) : vk_sampler_for(desc, st_->shadow);
+    } else if (integer_view) smp = vk_default_sampler(false);
     static int cs_texlog = -1;  // (research, LARECOMP_CS_TEXLOG=1: compute shaders' mipmapped textures, as bound)
     if (cs_texlog < 0) cs_texlog = ENV("LARECOMP_CS_TEXLOG") != NULL;
     if (cs_texlog && stage == 5 && h && st.tpool && tic < (uint32_t)st.tpool->count) {

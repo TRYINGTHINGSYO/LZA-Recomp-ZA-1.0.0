@@ -2899,7 +2899,10 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         sp(&s, "  gl_Position = vec4(0, 0, 0, 1);\n");
         for (int i = 0; i < 32; i++)
             if (c->out_attr_mask & (1u << i)) sp(&s, "  v%d = vec4(0, 0, 0, 1);\n", i);
-        if (info->writes_point_size) sp(&s, "  gl_PointSize = 0.0f;\n");
+        // A translated vertex shader may also be used for point-list transform
+        // feedback. Vulkan requires PointSize to be written without maintenance5,
+        // even when the guest shader never explicitly stores its point size.
+        sp(&s, info->writes_point_size ? "  gl_PointSize = 0.0f;\n" : "  gl_PointSize = 1.0f;\n");
     }
     // LARECOMP_VK_PRECISE=1 (research): `precise` registers - no contraction. Maxwell rounds FMUL and FADD separately
     // (FFMA, emitted as fma(), is the fused one); a compiler fusing a*b + c rounds once, an ulp apart. No game needed it

@@ -86,6 +86,7 @@ def main():
     ap.add_argument('--zig')
     ap.add_argument('-j', '--jobs', type=int, default=os.cpu_count() or 4)
     ap.add_argument('--install', metavar='FOLDER', help='copy the result into an installed release folder')
+    ap.add_argument('--debug-symbols', action='store_true', help='preserve DWARF in the runtime for local crash diagnosis')
     args = ap.parse_args()
     if not os.path.isfile('Makefile') or not os.path.isdir('runtime'):
         die('run it from the repository root')
@@ -214,6 +215,8 @@ def main():
             x = '-OUT:' + B + '/%s.exe' % exe_name
         keep.append(x)
     keep += [res, '-SUBSYSTEM:windows']  # (a windowed program: no console window, the log in lasrecomp.log; build_exe.sh)
+    if args.debug_symbols:
+        keep.append('-DEBUG:DWARF')
     ok, out = run([zig] + keep, tries=1)
     if not ok:
         die('relink failed:\n' + out[-3000:])

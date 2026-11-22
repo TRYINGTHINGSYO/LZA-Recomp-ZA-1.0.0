@@ -28,8 +28,18 @@ static VkDebugUtilsMessengerEXT messenger;
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_cb(VkDebugUtilsMessageSeverityFlagBitsEXT sev, VkDebugUtilsMessageTypeFlagsEXT type,
                                                const VkDebugUtilsMessengerCallbackDataEXT *d, void *user) {
     (void)type, (void)user;
-    static int n;
-    if (sev >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT && n++ < 500) LOG("[vk] %s\n", d->pMessage);
+    static atomic_uint n;
+    if (sev >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT &&
+        ((sev & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) || atomic_fetch_add_explicit(&n, 1, memory_order_relaxed) < 500))
+        LOG("[vk] %s\n", d->pMessage);
+    const char *stop = ENV("LZA_VALIDATION_STOP_ON_ERROR");
+    if ((sev & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) && stop && !strcmp(stop, "1")) {
+        LOG("[vk] validation error: stopping diagnostic run before continuing invalid Vulkan work\n");
+        fflush(stderr);
+        // Do not run process-exit destructors while inside the driver's callback:
+        // they can wait for renderer workers which are blocked on this call.
+        _Exit(2);
+    }
     return VK_FALSE;
 }
 
@@ -54,23 +64,39 @@ static void create_instance(void) {
             if (!dup) ext[n_ext++] = pe[i];
         }
     }
-    bool validate = ENV("LARECOMP_VK_VALIDATION") != NULL;
+    const char *gpuav_option = ENV("LZA_GPU_ASSISTED_VALIDATION");
+    bool gpuav = gpuav_option && !strcmp(gpuav_option, "1");
+    bool validate = ENV("LARECOMP_VK_VALIDATION") != NULL || gpuav;
     if (validate) ext[n_ext++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
     const char *layers[] = {"VK_LAYER_KHRONOS_validation"};
     VkApplicationInfo app = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "LARecomp",
                              .pEngineName = "LARecomp", .apiVersion = VK_API_VERSION_1_3};
-    VkInstanceCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .pApplicationInfo = &app,
+    // Adapted from the working port's diagnostic mode (Hexveil404, MIT).
+    // Core validation checks API use; GPU-assisted validation instruments shader
+    // accesses, including buffer device addresses. This remains opt-in and slow.
+    const VkBool32 on = VK_TRUE, off = VK_FALSE;
+    const VkLayerSettingEXT settings[] = {
+        {"VK_LAYER_KHRONOS_validation", "gpuav_enable", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &on},
+        {"VK_LAYER_KHRONOS_validation", "validate_core", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &off}};
+    const VkLayerSettingsCreateInfoEXT layer_settings = {
+        .sType = VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT, .settingCount = 2, .pSettings = settings};
+    VkInstanceCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .pNext = gpuav ? &layer_settings : NULL,
+                               .pApplicationInfo = &app,
                                .enabledExtensionCount = n_ext, .ppEnabledExtensionNames = ext,
                                .enabledLayerCount = validate ? 1 : 0, .ppEnabledLayerNames = layers};
     VkResult r = vkCreateInstance(&ci, NULL, &g_vk.inst);
     if (r != VK_SUCCESS && validate) {
+        const char *stop = ENV("LZA_VALIDATION_STOP_ON_ERROR");
+        if (stop && !strcmp(stop, "1")) FATAL("required Vulkan validation layer unavailable (%d)\n", r);
         LOG("[vk] validation layer unavailable (%d); continuing without\n", r);
         ci.enabledLayerCount = 0;
         ci.enabledExtensionCount--;
+        ci.pNext = NULL;
         validate = false;
         r = vkCreateInstance(&ci, NULL, &g_vk.inst);
     }
     if (r != VK_SUCCESS) FATAL("vkCreateInstance: %d (is a Vulkan 1.3 driver installed?)\n", r);
+    if (gpuav && validate) LOG("[vk] GPU-assisted validation requested; not a performance-test mode\n");
     if (validate) {
         PFN_vkCreateDebugUtilsMessengerEXT f =
             (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(g_vk.inst, "vkCreateDebugUtilsMessengerEXT");

@@ -127,6 +127,8 @@ VkImageView vk_storage_view(NvnTexture *t, const NvnTextureView *v, bool has_vie
 VkImageView vk_dummy_storage_view(int sudim, bool atomic);
 VkSampler vk_sampler(NvnSamplerDesc *d);
 VkSampler vk_sampler_for(NvnSamplerDesc *d, bool shadow);  // (textures.c: no compare for non-.DC reads)
+VkSampler vk_sampler_nearest(const NvnSamplerDesc *d);
+bool vk_view_is_integer(NvnTexture *t, const NvnTextureView *v, bool has_view);
 VkSampler vk_default_sampler(bool linear);
 void vk_image_init_layout(VkCommandBuffer cb, VkImage img, VkImageAspectFlags aspect);
 // Destruction once every submission that may use the object has completed.

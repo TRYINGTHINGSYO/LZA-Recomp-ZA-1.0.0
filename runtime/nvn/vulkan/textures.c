@@ -1169,6 +1169,60 @@ static VkCompareOp compare_op(uint32_t f) {
 // result of a compare sampler on a non-shadow image type undefined (NVIDIA: 0/1 - no cast shadows). Those get the same
 // sampler without compare.
 static VkSampler sampler_create(NvnSamplerDesc *d, bool cmp);
+// Adapted from Hexveil404/PokeZ-ARecomp (MIT): integer sampled images cannot
+// use linear filtering or anisotropy. Keep the original NVN sampler immutable.
+bool vk_view_is_integer(NvnTexture *t, const NvnTextureView *v, bool has_view) {
+    VkFormat format = vk_format(t->format);
+    TexBackend *b = (TexBackend *)t->backend;
+    if (b && b->aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+        uint32_t mode = has_view && v && (v->setmask & 16) ? v->ds_mode : t->ds_mode;
+        return mode == 1;
+    }
+    if (b && b->format != format) format = b->format;
+    else if (has_view && v && (v->setmask & 4)) format = fmt_of(v->format).vf;
+    switch (format) {
+    case VK_FORMAT_R8_UINT: case VK_FORMAT_R8G8_UINT: case VK_FORMAT_R8G8B8A8_UINT:
+    case VK_FORMAT_B8G8R8A8_UINT: case VK_FORMAT_A8B8G8R8_UINT_PACK32:
+    case VK_FORMAT_A2B10G10R10_UINT_PACK32: case VK_FORMAT_A2R10G10B10_UINT_PACK32:
+    case VK_FORMAT_R16_UINT: case VK_FORMAT_R16G16_UINT: case VK_FORMAT_R16G16B16A16_UINT:
+    case VK_FORMAT_R32_UINT: case VK_FORMAT_R32G32_UINT: case VK_FORMAT_R32G32B32_UINT:
+    case VK_FORMAT_R32G32B32A32_UINT: case VK_FORMAT_S8_UINT:
+    case VK_FORMAT_R8_SINT: case VK_FORMAT_R8G8_SINT: case VK_FORMAT_R8G8B8A8_SINT:
+    case VK_FORMAT_B8G8R8A8_SINT: case VK_FORMAT_A8B8G8R8_SINT_PACK32:
+    case VK_FORMAT_A2B10G10R10_SINT_PACK32: case VK_FORMAT_A2R10G10B10_SINT_PACK32:
+    case VK_FORMAT_R16_SINT: case VK_FORMAT_R16G16_SINT: case VK_FORMAT_R16G16B16A16_SINT:
+    case VK_FORMAT_R32_SINT: case VK_FORMAT_R32G32_SINT: case VK_FORMAT_R32G32B32_SINT:
+    case VK_FORMAT_R32G32B32A32_SINT:
+        return true;
+    default: return false;
+    }
+}
+
+VkSampler vk_sampler_nearest(const NvnSamplerDesc *d) {
+    NvnSamplerDesc nearest = *d;
+    nearest.backend = nearest.backend_nocmp = NULL;
+    nearest.mag_filter = 0;
+    nearest.min_filter = d->min_filter <= 1 ? 0 : 2;
+    nearest.max_aniso = 0;
+    nearest.compare_mode = 0;
+    static NvnSamplerDesc cache[256];
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    uint64_t hash = 0xcbf29ce484222325ull;
+    for (size_t i = 0; i < offsetof(NvnSamplerDesc, backend); i++) {
+        hash ^= ((const uint8_t *)&nearest)[i]; hash *= 0x100000001B3ull;
+    }
+    pthread_mutex_lock(&lock);
+    VkSampler sampler = VK_NULL_HANDLE;
+    for (uint32_t n = 0, slot = (uint32_t)hash & 255; n < 256; n++, slot = (slot + 1) & 255) {
+        if (!cache[slot].backend) { cache[slot] = nearest; sampler = vk_sampler(&cache[slot]); break; }
+        if (!memcmp(&cache[slot], &nearest, offsetof(NvnSamplerDesc, backend))) {
+            sampler = vk_sampler(&cache[slot]); break;
+        }
+    }
+    pthread_mutex_unlock(&lock);
+    return sampler ? sampler : vk_default_sampler(false);
+}
+
 VkSampler vk_sampler(NvnSamplerDesc *d) { return d->backend ? (VkSampler)d->backend : sampler_create(d, true); }
 VkSampler vk_sampler_for(NvnSamplerDesc *d, bool shadow) {
     if (shadow || !d->compare_mode || ENV("LARECOMP_KEEP_COMPARE")) return vk_sampler(d);
