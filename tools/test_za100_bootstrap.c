@@ -8,5 +8,7 @@ int main(void) {
     assert(!za100_build(id));
     const char *value = getenv("LZA_EXPERIMENTAL_ZA100_BOOTSTRAP");
     assert(za100_bootstrap_enabled() == (value && !strcmp(value, "1")));
+    const char *timing = getenv("LZA_EXPERIMENTAL_ZA100_TIMING");
+    assert(za100_timing120_enabled() == (za100_bootstrap_enabled() && timing && !strcmp(timing, "120")));
     return 0;
 }

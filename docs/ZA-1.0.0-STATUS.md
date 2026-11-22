@@ -18,7 +18,7 @@ tables, segment boundaries, wrong targets/registers and explicit opt-in.
 
 An opt-in generic-runtime bootstrap recognizes 1.0.0 as a distinct build,
 requires `LZA_EXPERIMENTAL_ZA100_BOOTSTRAP=1` and validates the image before
-generation. It starts at 30 FPS and does not select the 2.0.2 hook profile. This
+generation. It defaults to 30 FPS and does not select the 2.0.2 hook profile. This
 is a developer test path, not high-FPS support. Runtime compilation has succeeded
 on Windows using the full Zig 0.17.0 package. Game-code generation and runtime
 boot results must be recorded separately; successful checks do not imply either.
@@ -95,3 +95,19 @@ manual reverse engineering of 1.0.0. No game binary belongs in this repository.
 
 No game data, keys, generated game code, game libraries or saves are distributed.
 Original licenses and upstream attribution remain in place.
+
+
+### Offline 120 FPS timing prototype (2026-11-21)
+
+A separate `LZA_EXPERIMENTAL_ZA100_TIMING=120` opt-in, together with the
+bootstrap opt-in, selects a 120 FPS target and a duration of 8,333,333 ns in
+verified frame-table entry 1 (`0x70031e6a78`). The existing delayed table patch
+checks that the entry still contains 33,333,334 ns before writing. Unknown
+builds and ordinary bootstrap launches do not select this prototype.
+
+The prototype stays in the original frame mode and returns before any of the
+2.0.2 menu, battle, research or native-mode hooks are registered. It does not
+claim correct menu/battle/cutscene timing or a driver crash fix. It is a source
+experiment, not a playable 120 FPS release. The compiled runtime is kept in the
+source build directory; it has not replaced either installed game. No GPU test
+was run, respecting the user's request. Performance and stability are unverified.

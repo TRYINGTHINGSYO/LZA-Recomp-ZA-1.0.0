@@ -21,6 +21,7 @@
 
 #include "../hle.h"
 #include "../settings.h"
+#include "../za100_bootstrap.h"
 
 void rt_register_fnhook(uint64_t addr, int (*fn)(Cpu *c, uint64_t addr));  // runtime/fnhook.c
 void rt_call_original(Cpu *c, uint64_t addr);
@@ -584,6 +585,21 @@ void pla60_configure(const char *exefs) {
         fseek(f, 0x40, SEEK_SET);
         if (fread(id, 1, 8, f) != 8) memset(id, 0, 8);
         fclose(f);
+    }
+    if (za100_build(id)) {
+        // Preflight validates this table before game-code generation. Use entry 1
+        // in the original 30 Hz mode; no unverified object layout or 2.0.2 hooks.
+        g_pla60_entry = g_pla60_build = 0;
+        g_pla60_patched = false;
+        g_za_native = false;
+        g_pla60_nominal = 33333334;
+        if (za100_timing120_enabled()) {
+            g_pla60_entry = g_pla60_build = 0x70031e6a78ull;
+            g_pla60_ns = 1000000000ull / 120;
+            g_ui_scale = (float)((double)g_pla60_ns / g_pla60_nominal);
+            LOG("[fps60] UNVERIFIED Z-A 1.0.0: 120 FPS timing experiment, no version-specific compensation hooks\n");
+        }
+        return;
     }
     const char *e = getenv("LARECOMP_PLA_60FPS"), *n = getenv("LARECOMP_LEGENDS_FPS");
     bool on = e ? atoi(e) != 0 : g_settings.fps >= 60;

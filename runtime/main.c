@@ -1,3 +1,4 @@
+#include "za100_bootstrap.h"
 // LAS Recomp entry: load modules, set up the kernel, run nn::init::Start on the main thread.
 #include <SDL3/SDL.h>
 #include <stdbool.h>
@@ -345,8 +346,9 @@ int main(int argc, char **argv) {
                 }
                 // This milestone tests generic runtime boot only. 1.0.0 has no
                 // verified high-FPS compensation or game-specific hook profile.
-                g_settings.fps = 30;
-                LOG("[boot] EXPERIMENTAL Z-A 1.0.0 bootstrap: 30 FPS, no 2.0.2 game hooks; use a disposable save copy\n");
+                g_settings.fps = za100_timing120_enabled() ? 120 : 30;
+                if (g_settings.fps == 120) LOG("[boot] UNVERIFIED 1.0.0 timing experiment: target 120 FPS; renderer crash unresolved\n");
+                LOG("[boot] EXPERIMENTAL Z-A 1.0.0 bootstrap: no 2.0.2 game hooks; use a disposable save copy\n");
             }
             rt_fnhook_set_build(build);
             extern const char *g_game_version;  // (runtime/services/am.c)

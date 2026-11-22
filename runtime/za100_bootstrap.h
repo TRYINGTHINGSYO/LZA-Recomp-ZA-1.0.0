@@ -15,4 +15,9 @@ static inline bool za100_bootstrap_enabled(void) {
     const char *value = getenv("LZA_EXPERIMENTAL_ZA100_BOOTSTRAP");
     return value && !strcmp(value, "1");
 }
+// Separate opt-in: never change the bootstrap's default 30 FPS diagnostic path.
+static inline bool za100_timing120_enabled(void) {
+    const char *value = getenv("LZA_EXPERIMENTAL_ZA100_TIMING");
+    return za100_bootstrap_enabled() && value && !strcmp(value, "120");
+}
 #endif
