@@ -444,9 +444,10 @@ static uint64_t g_pla60_ns = 16666667;  // the frame time: 60 fps, 120, 144, FPS
 // for 2.0.2 does: that byte read as 0). The compensations made for 30 fps steps (menu animations, cutscene timelines)
 // scale against 16.7 ms then. LARECOMP_ZA_NATIVE60=0: the old way.
 static bool g_za_native;
+static uint64_t g_za_roll_guard;  // build-specific; zero when not verified
 static uint64_t g_pla60_nominal = 33333334;  // the game's own step in the mode it runs in (30: 33.3 ms, native 60: 16.7)
 uint64_t pla60_nominal_ns(void) { return g_pla60_nominal; }
-static int za_mode_hook(Cpu *c, uint64_t addr) {  // (0x7001b29660 entry: x0 = the display object)
+static int za_mode_hook(Cpu *c, uint64_t addr) {  // (verified 1.0.0 / 2.0.2 entries: x0 = the display object)
     (void)addr;
     if (!g_za_native || !g_pla60_entry) return 0;
     uint64_t o = c->x[0] ? *(const uint64_t *)(uintptr_t)(c->x[0] + 0x40) : 0;
@@ -587,17 +588,23 @@ void pla60_configure(const char *exefs) {
         fclose(f);
     }
     if (za100_build(id)) {
-        // Preflight validates this table before game-code generation. Use entry 1
-        // in the original 30 Hz mode; no unverified object layout or 2.0.2 hooks.
+        // Preflight validates the table and native-mode entry/object accesses.
+        // No 2.0.2-only state addresses or compensation hooks are selected.
         g_pla60_entry = g_pla60_build = 0;
         g_pla60_patched = false;
         g_za_native = false;
+        g_za_roll_guard = 0;
         g_pla60_nominal = 33333334;
+        g_ui_scale = 1.0f;
         if (za100_timing120_enabled()) {
-            g_pla60_entry = g_pla60_build = 0x70031e6a78ull;
+            g_pla60_entry = g_pla60_build = 0x70031e6a70ull;
+            g_za_native = true;
+            g_pla60_nominal = 16666667;
+            // Verified 1.0.0 entry: x19=x0, then [[x19+0x40]+0x20].
+            rt_register_fnhook_at(0x70019e3730ull, za_mode_hook);
             g_pla60_ns = 1000000000ull / 120;
             g_ui_scale = (float)((double)g_pla60_ns / g_pla60_nominal);
-            LOG("[fps60] UNVERIFIED Z-A 1.0.0: 120 FPS timing experiment, no version-specific compensation hooks\n");
+            LOG("[fps60] UNVERIFIED Z-A 1.0.0: 120 FPS native-mode experiment, no menu/battle compensation hooks\n");
         }
         return;
     }
@@ -615,6 +622,7 @@ void pla60_configure(const char *exefs) {
                 g_za_native = g_pla60_build == 0x7000000000ull + 0x3393E28 && !(nv && atoi(nv) == 0);
                 if (g_za_native) {
                     g_pla60_build = 0x7000000000ull + 0x3393E20;
+                    g_za_roll_guard = 0x700610B980ull;
                     static bool mh;
                     if (!mh) mh = true, rt_register_fnhook_at(0x7001b29660ull, za_mode_hook);
                 }
@@ -907,7 +915,7 @@ void pla60_present(bool paced) {
             }
             // (native mode: while the game's byte at main+0x610B980 is set, one exact period - the community dynamic
             // 60 fps patch does the same there: "the rolling mechanic" softlocked on uneven steps)
-            if (g_za_native && *(const volatile uint8_t *)(uintptr_t)(0x7000000000ull + 0x610B980)) dt = g_pla60_ns;
+            if (g_za_native && g_za_roll_guard && *(const volatile uint8_t *)(uintptr_t)g_za_roll_guard) dt = g_pla60_ns;
             *ft = dt;
             g_last_step = dt;
             g_ui_scale = (float)((double)dt / (double)g_pla60_nominal);

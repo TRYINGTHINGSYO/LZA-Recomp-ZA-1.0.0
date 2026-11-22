@@ -15,6 +15,9 @@ BASE = 0x7000000000
 # Locations documented in Hexveil404/PokeZ-ARecomp tools/za_patches.py.
 # Matching these instructions is necessary, not sufficient for runtime support.
 TIMING_SITES = (
+    ('frame_entry', 0x70019e3730, 0xa9bd7bfd),
+    ('frame_this', 0x70019e3750, 0xaa0003f3),
+    ('frame_config', 0x70019e37a4, 0xf9402269),
     ('frame_mode', 0x70019e37a8, 0x39c08134),
     ('frame_duration', 0x70019e3740, 0xf9400428),
     ('frame_channel_step', 0x70019e3848, 0x2a1403e2),

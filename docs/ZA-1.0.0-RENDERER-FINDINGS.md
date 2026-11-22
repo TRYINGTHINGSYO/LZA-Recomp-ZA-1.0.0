@@ -113,3 +113,40 @@ own waits still require investigation. Validation changed execution behavior;
 its passing run cannot establish a production crash fix or identify the cause.
 No additional uninstrumented reset loop was run. The test process exited and no
 experimental game was left running. Raw logs and game-derived files stay local.
+
+
+## Follow-up: dynamic shader flow workaround and 120 FPS observation
+
+Two isolated ordinary 30 FPS comparisons still lost the device: disabling
+`LARECOMP_XLAT_NO_RETYPE`'s optimization (setting the option to 1), and disabling
+direct constant-buffer reads with `LARECOMP_VK_UBO_DIRECT=0`.
+
+Selecting the existing `LARECOMP_XLAT_FLOW_DYN=1` translation path instead,
+with Robustness2 enabled and GPL disabled, passed the hotel loading transition
+and scripted stick movement, reaching frame 1055 / 46.4 seconds at 30 FPS without
+validation. This points to the structured shader-control-flow path or its driver
+compilation as a lead. It does not distinguish translator semantics, driver
+code generation, or timing effects, and is a workaround rather than a proven
+root-cause repair. Cold shader builds on the dynamic path can be slower.
+
+The old timing prototype left the game in its 30 FPS frame mode. Local read-only
+disassembly independently verified the 1.0.0 clock entry at `0x70019e3730`,
+`mov x19,x0` and the config access `[[x19+0x40]+0x20]`. The updated opt-in profile
+uses that entry to select mode 0 and patches verified table entry 0 instead of
+entry 1. The preflight now checks the entry, this-pointer assignment and config
+load as well as the former instructions. The 2.0.2 rolling-state address is now
+explicitly build-specific and is never read in 1.0.0.
+
+With that mode hook, a 120 FPS target, dynamic shader flow, Robustness2, GPL off,
+and `LARECOMP_NO_USER_INPUT=0`, the copied hotel save visibly rendered at 120 FPS.
+The frame logs recorded consecutive 120.0 FPS intervals (240 frames per two
+seconds, max 9 ms during settled intervals), reaching frame 11040 at 94 seconds
+without device loss. Live Xbox Series X controller
+input was detected, button/stick state changes were logged, and movement was
+visible. The earlier diagnostic scripts deliberately blocked real input;
+the controller itself was recognized correctly.
+
+This is a local scene-level result. Menus, battles, cutscenes, rolls, full-game
+logic speed and long-session stability remain unverified. No claim of whole-game
+compatibility, a definitive driver fix or 144 FPS is made. The original game
+and save remain untouched. The live test is using a copied save.

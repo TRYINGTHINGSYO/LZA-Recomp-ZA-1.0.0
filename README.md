@@ -1,10 +1,12 @@
 # Experimental Z-A 1.0.0 development fork
 
-**Not a playable 1.0.0 release.** The experimental opt-in bootstrap compiles and
-reaches the 1.0.0 title screen at 30 FPS, but entering gameplay currently crashes
-the Vulkan device. Normal support remains upstream's 2.0.2 build only.
-See [1.0.0 development status](docs/ZA-1.0.0-STATUS.md). There is no verified
-120/144 FPS result for 1.0.0 from this fork. Do not replace a working installation.
+**Experimental 1.0.0 gameplay at 120 FPS observed locally.** A verified native
+frame-mode hook plus the existing dynamic shader control-flow path allowed the
+copied save to run with live Xbox controller input at 120 FPS. This is a limited
+hotel-scene result, not validation of the whole game. The default shader path
+still caused device loss; keep the original installation and save.
+See [development status](docs/ZA-1.0.0-STATUS.md) and
+[renderer findings](docs/ZA-1.0.0-RENDERER-FINDINGS.md) for conditions and limits.
 
 The original upstream README follows; its gameplay and performance claims refer
 to the upstream 2.0.2 port, not this experimental 1.0.0 effort.

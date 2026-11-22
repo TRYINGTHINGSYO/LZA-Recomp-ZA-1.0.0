@@ -25,6 +25,14 @@ class PreflightTests(unittest.TestCase):
         self.image[TIMING_SITES[0][1] - BASE] ^= 1
         self.assertFalse(check_image(BUILD, self.image, self.text)['timing_checks_passed'])
 
+    def test_every_native_mode_instruction_is_checked(self):
+        for name, address, _ in TIMING_SITES:
+            with self.subTest(site=name):
+                offset = address - BASE
+                self.image[offset] ^= 1
+                self.assertFalse(check_image(BUILD, self.image, self.text)['timing_checks_passed'])
+                self.image[offset] ^= 1
+
     def test_data_segment_is_not_accepted_as_code(self):
         self.assertFalse(check_image(BUILD, self.image, (0, 4))['timing_checks_passed'])
 

@@ -1,8 +1,8 @@
 # Experimental Z-A 1.0.0 port
 
 See the [renderer investigation](ZA-1.0.0-RENDERER-FINDINGS.md) for two confirmed
-Vulkan API corrections and the remaining device-loss failure. Gameplay is still
-not verified; GPU tests are stopped at the user's request.
+Vulkan API corrections, the device-loss investigation and a subsequent local
+120 FPS hotel-scene result. GPU tests were later reauthorized by the user.
 
 This branch is development groundwork, **not a working 1.0.0 release**. The
 upstream runtime's supported Z-A version remains 2.0.2. Do not remove its version
@@ -122,3 +122,22 @@ The ordinary 120-target run logged 120 FPS present pacing, delivered about
 120 FPS or resolve the renderer crash. See the renderer findings for the test
 conditions and limitations. Neither installed working game nor its save was
 replaced.
+
+
+### Follow-up milestone: 120 FPS hotel gameplay and live controller observed
+
+The updated profile selects the verified 1.0.0 native frame-mode entry and table
+entry 0, with the existing `LARECOMP_XLAT_FLOW_DYN=1` shader path as a device-loss
+workaround. Frame logs and the visible overlay agreed on 120 FPS while the live
+Xbox controller moved the character. This supersedes the failed entry-1-only
+prototype above, without establishing whole-game compatibility.
+
+Fourteen synthetic preflight tests pass, including mutation of every checked
+native-mode instruction, and the Windows runtime compiles. The actual local main
+passed all six instruction checks, the unique table check and all six references.
+
+For the isolated local installation, `Launch-120FPS.cmd` sets the experimental
+options and explicitly enables live input. Its generic source is
+`tools/windows/launch_za100_120.cmd`: copy it next to the compiled executable and
+provide `controller-120.ini`. No generated game code, assets, saves or binaries
+are part of this repository. The working original installation is retained.
