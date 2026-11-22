@@ -111,3 +111,14 @@ claim correct menu/battle/cutscene timing or a driver crash fix. It is a source
 experiment, not a playable 120 FPS release. The compiled runtime is kept in the
 source build directory; it has not replaced either installed game. No GPU test
 was run, respecting the user's request. Performance and stability are unverified.
+
+
+### 120 FPS prototype tested: failed
+
+GPU testing was subsequently reauthorized. Instrumented 30 FPS movement ran
+without a reported shader-access error, but at roughly 4 FPS under validation.
+The ordinary 120-target run logged 120 FPS present pacing, delivered about
+30 FPS and then failed with device loss. This prototype does **not** unlock
+120 FPS or resolve the renderer crash. See the renderer findings for the test
+conditions and limitations. Neither installed working game nor its save was
+replaced.

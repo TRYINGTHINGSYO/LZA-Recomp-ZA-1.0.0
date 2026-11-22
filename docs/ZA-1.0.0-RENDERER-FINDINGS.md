@@ -84,3 +84,32 @@ Integer-sampler handling and GPU-assisted validation setup were adapted from
 [Hexveil404/PokeZ-ARecomp](https://github.com/Hexveil404/PokeZ-ARecomp), under its
 MIT license. LZ&A and its existing contributors retain their original attribution
 and licenses. Nintendo game-derived material remains local.
+
+
+## Resumed GPU tests (2026-11-21)
+
+The user explicitly authorized GPU testing again. A separate diagnostic folder
+used the new runtime and a copied save; the original working installation was
+not replaced.
+
+- GPU-assisted validation, Robustness2 enabled, GPL disabled, default 30 FPS:
+  loaded the copied save into the hotel. An idle run reached frame 470 at
+  72 seconds and was closed normally. No shader-access error was reported.
+- A second instrumented run held the left stick up for 60 frames and right for
+  60 frames. Input sampling and changed geometry counts confirmed movement;
+  the visible scene changed. It reached frame 488 at 73.6 seconds and was closed
+  normally. The approximately 4 FPS observed with instrumentation is not a
+  performance result for ordinary gameplay.
+- Without validation, with the experimental timing opt-in at 120, Robustness2
+  enabled and GPL disabled: the log confirmed `present pacing: 120.0 fps`.
+  Actual throughput was 30.5 FPS at frame 388 / 12.1 seconds. It subsequently
+  failed with `VK_ERROR_DEVICE_LOST`; the GPU instruction address was
+  `0x2000cd1b0`. The movement script began at frame 500, so this run does not
+  establish that scripted movement triggered the failure.
+
+**Outcome:** the 120 FPS timing-table prototype is insufficient. A requested
+pacing target is not achieved throughput. The game's frame-clock mode and its
+own waits still require investigation. Validation changed execution behavior;
+its passing run cannot establish a production crash fix or identify the cause.
+No additional uninstrumented reset loop was run. The test process exited and no
+experimental game was left running. Raw logs and game-derived files stay local.
