@@ -141,3 +141,20 @@ options and explicitly enables live input. Its generic source is
 `tools/windows/launch_za100_120.cmd`: copy it next to the compiled executable and
 provide `controller-120.ini`. No generated game code, assets, saves or binaries
 are part of this repository. The working original installation is retained.
+
+
+### Hold right mouse to look (2026-11-21)
+
+The local 120 FPS launcher now sets `LARECOMP_MOUSE_RIGHT_LOOK=1` and its ini
+sets `mouse_camera = 1`. In this opt-in mode only holding RMB captures the mouse;
+motion feeds the existing right-stick camera path while keyboard/controller
+movement remains independent. Releasing RMB, losing focus or opening a menu
+releases capture and clears pending mouse motion. RMB is consumed as camera
+control instead of the default ZL/aim binding; keyboard `1` and the controller
+ZL/left trigger remain available. Other launches retain the former click-to-capture
+behavior unless this option is set.
+
+The native runtime compiled. An SDL host-input scenario held W, then RMB while
+injecting horizontal mouse motion, then released RMB before W. The scene camera
+and player position changed and the game returned to a free pointer at 120 FPS.
+The scripted test was then closed for a normal live-input launch.

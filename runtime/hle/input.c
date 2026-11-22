@@ -120,6 +120,11 @@ static void recompute_pad(void) {
 // keyboard bindings (BIND_MOUSE_*). With the mouse camera on (setting), a click in the window takes the mouse;
 // losing focus or opening the menu (Esc) lets it go.
 static SDL_Window *mouse_win;
+static bool mouse_right_look;
+static bool mouse_right_look_enabled(void) {
+    const char *value = getenv("LARECOMP_MOUSE_RIGHT_LOOK");
+    return value && !strcmp(value, "1");
+}
 static _Atomic int gyro_aiming;  // the game has the motion sensor started (aiming): the mouse turns the gyro
 static _Atomic int64_t mouse_acc_x, mouse_acc_y;  // motion not yet applied to the virtual gyro, in 1/1000 pixel
 static _Atomic int64_t cam_acc_x, cam_acc_y;      // motion not yet read as the camera stick, in 1/1000 pixel
@@ -127,6 +132,7 @@ static _Atomic int touch_down;
 static void mouse_release(void) {
     if (mouse_win) SDL_SetWindowRelativeMouseMode(mouse_win, false);
     mouse_win = NULL;
+    mouse_right_look = false;
     for (int b = BIND_MOUSE_LEFT; b <= BIND_MOUSE_X2; b++) keys_down[b] = 0;
     cam_acc_x = cam_acc_y = 0;
     touch_down = 0;
@@ -438,7 +444,21 @@ void input_handle_event(const SDL_Event *e) {
         // while a test window aims beside what they're doing)
         static int scripted = -1;
         if (scripted < 0) scripted = getenv("LARECOMP_INPUT") || getenv("LARECOMP_REPLAY") || getenv("LARECOMP_NO_MOUSE_GRAB");
-        if (!mouse_win && w && !menu && !scripted && (gyro_aiming || (cam && down))) {
+        bool right_look = cam && mouse_right_look_enabled();
+        bool right_button = !motion && !wheel && e->button.button == SDL_BUTTON_RIGHT;
+        // Hold-to-look consumes RMB instead of sending the default ZL binding.
+        // Keyboard movement and the controller are still read independently.
+        if (right_look && right_button && !menu) {
+            if (down && w && !scripted) {
+                mouse_win = w;
+                mouse_right_look = true;
+                SDL_SetWindowRelativeMouseMode(w, true);
+                touch_down = 0;
+                last_kbm = 1;
+            } else if (!down && mouse_right_look) mouse_release();
+            break;
+        }
+        if (!right_look && !mouse_win && w && !menu && !scripted && (gyro_aiming || (cam && down))) {
             mouse_win = w;
             SDL_SetWindowRelativeMouseMode(w, true);
             touch_down = 0;
@@ -449,7 +469,7 @@ void input_handle_event(const SDL_Event *e) {
         }
         if (motion) {
             if (mouse_win) {
-                if (gyro_aiming) mouse_acc_x += (int64_t)(e->motion.xrel * 1000), mouse_acc_y += (int64_t)(e->motion.yrel * 1000);
+                if (gyro_aiming && !mouse_right_look) mouse_acc_x += (int64_t)(e->motion.xrel * 1000), mouse_acc_y += (int64_t)(e->motion.yrel * 1000);
                 else cam_acc_x += (int64_t)(e->motion.xrel * 1000), cam_acc_y += (int64_t)(e->motion.yrel * 1000);
                 if (e->motion.xrel || e->motion.yrel) last_kbm = 1;
             } else {
